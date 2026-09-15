@@ -1,0 +1,15 @@
+{
+  "name": "orderops-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OrderOps AI — run frontend + FastAPI backend together",
+  "scripts": {
+    "dev": "concurrently -k -n backend,front -c cyan,magenta \"npm run dev:backend\" \"npm run dev:front\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:front": "npm run dev --prefix front",
+    "install:all": "npm install --prefix front && npm install --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

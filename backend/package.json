@@ -1,0 +1,9 @@
+{
+  "name": "orderops-ai-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ./run-dev.js",
+    "start": "node ./run-dev.js --no-reload"
+  }
+}
