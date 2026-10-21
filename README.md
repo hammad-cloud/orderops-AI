@@ -2,9 +2,11 @@
 
 Monorepo for the autonomous order triage & resolution agent (BRD).
 
+![Order pipeline dashboard](docs/dashboard.jpg)
+
 ## Setup (first time)
 
-Requires **Node.js 20+** and **Python 3.12–3.14**.
+Requires **Node.js 22+** and **Python 3.12–3.14**.
 
 ```bash
 # Node deps (root + frontend + backend runner)
@@ -55,6 +57,7 @@ Frontend calls go to `/api/v1/...` and `/health` on port **3000**; Next.js proxi
 ├── backend/               # FastAPI + LangGraph API (see backend/README.md)
 ├── frontend/              # Next.js ops dashboard (see frontend/README.md)
 ├── .github/               # CI (lint, tests against Postgres, type-check, build) + Dependabot
+├── docs/                  # README screenshots
 ├── docker-compose.yml     # Local PostgreSQL
 ├── SECURITY.md            # Vulnerability reporting + deployment checklist
 └── package.json           # `npm run dev` starts both apps together

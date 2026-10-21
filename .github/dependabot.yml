@@ -3,12 +3,32 @@ updates:
   - package-ecosystem: pip
     directory: /backend
     schedule: { interval: weekly }
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+    # Major upgrades that need migration work are done by hand, not as weekly PRs.
+    # Security fixes still arrive through Dependabot security updates.
+    ignore:
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: eslint-config-next
+        update-types: [version-update:semver-major]
+      - dependency-name: tailwindcss
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
+
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    groups:
+      actions: { patterns: ["*"] }

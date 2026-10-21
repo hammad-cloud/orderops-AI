@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -45,5 +45,12 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health")
-async def health_check() -> dict[str, str]:
+async def health_check(response: Response) -> dict[str, str]:
+    """Reports "degraded" with 503 when the database is unreachable, so monitors and the UI pill notice."""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception:  # any DB failure means the API can't serve data
+        response.status_code = 503
+        return {"status": "degraded", "service": settings.PROJECT_NAME, "database": "unreachable"}
     return {"status": "ok", "service": settings.PROJECT_NAME}
