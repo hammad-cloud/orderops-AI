@@ -26,7 +26,7 @@ Frontend calls go to `/api/v1/...` and `/health` on port **3000**; Next.js proxi
 | Folder | Role | Stack |
 |--------|------|--------|
 | `backend/` | API, LangGraph agent, DB | FastAPI, LangGraph, SQLAlchemy, Alembic, PostgreSQL |
-| `front/` | Ops dashboard | Next.js, TypeScript |
+| `frontend/` | Ops dashboard | Next.js, TypeScript |
 
 ## BRD workflow
 

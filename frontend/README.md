@@ -15,7 +15,7 @@ Operations dashboard for order triage, negotiations, inventory, fraud audit, and
 ## Layout
 
 ```
-front/
+frontend/
 ├── public/                 # Static assets
 └── src/
     ├── app/                # Next.js App Router pages
@@ -41,7 +41,7 @@ front/
 ## Quick start
 
 ```bash
-cd front
+cd frontend
 npm install
 cp .env.example .env.local
 npm run dev
