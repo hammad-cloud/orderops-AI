@@ -10,14 +10,14 @@ frontend/src/
 ├── middleware.ts           # Redirects signed-out visitors to /login; renews the idle session
 ├── app/
 │   ├── (auth)/login/       # Sign-in page
-│   └── (dashboard)/        # orders (+ [id] detail), negotiations, inventory, audit, analytics
+│   └── (dashboard)/        # orders (+ new, [id] detail), negotiations, inventory, audit, analytics
 ├── components/
 │   ├── layout/             # App shell, sidebar, API status pill, idle sign-out timer
 │   ├── ui/                 # StatCard, ShareBar, SubmitButton
 │   └── analytics/          # Charts + CSV export (client components)
 ├── lib/
 │   ├── api/                # Server-side API client, one file per backend resource
-│   ├── actions.ts          # Server actions: login, logout, answer an offer
+│   ├── actions.ts          # Server actions: login, logout, create an order, answer an offer
 │   └── session.ts          # Cookie name/options and the 15-minute idle timeout
 ├── styles/                 # Global CSS + Tailwind
 └── types/                  # Shared TypeScript types (mirror the API's camelCase JSON)
