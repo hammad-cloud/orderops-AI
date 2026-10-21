@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/orders", label: "Orders" },
@@ -9,12 +12,18 @@ const links = [
 ];
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="sidebar">
       <div className="brand">OrderOps AI</div>
       <nav>
         {links.map((link) => (
-          <Link key={link.href} href={link.href}>
+          <Link
+            key={link.href}
+            href={link.href}
+            aria-current={pathname.startsWith(link.href) ? "page" : undefined}
+          >
             {link.label}
           </Link>
         ))}

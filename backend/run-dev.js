@@ -6,7 +6,8 @@ const root = __dirname;
 const isWin = process.platform === "win32";
 const reload = !process.argv.includes("--no-reload");
 
-const bin = isWin ? "python" : "python3";
+const venvPython = path.join(root, ".venv", isWin ? "Scripts/python.exe" : "bin/python");
+const bin = fs.existsSync(venvPython) ? venvPython : isWin ? "python" : "python3";
 const args = ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"];
 if (reload) args.push("--reload");
 

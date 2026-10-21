@@ -6,7 +6,17 @@ module.exports = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        // Single muted accent; status colors (emerald/amber/rose) stay semantic only.
+        brand: {
+          300: "#a9c1de",
+          400: "#7fa2cc",
+          500: "#5a83b8",
+          600: "#46699a",
+        },
+      },
+    },
   },
   plugins: [],
 };
