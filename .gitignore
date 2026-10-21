@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Python
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Next.js / TypeScript build output
+.next/
+*.tsbuildinfo
+
+# Secrets — commit only .env.example
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
