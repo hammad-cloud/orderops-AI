@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { BACKEND_URL, TOKEN_COOKIE, apiPost } from "@/lib/api/client";
+import { BACKEND_URL, apiPost } from "@/lib/api/client";
+import { TOKEN_COOKIE, cookieOptions } from "@/lib/session";
 
 export async function login(formData: FormData) {
   const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
@@ -15,19 +16,18 @@ export async function login(formData: FormData) {
   if (!res.ok) redirect(res.status === 429 ? "/login?error=locked" : "/login?error=invalid");
 
   const { token } = (await res.json()) as { token: string };
-  (await cookies()).set(TOKEN_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 12 * 3600, // matches the backend token lifetime
-    path: "/",
-  });
+  (await cookies()).set(TOKEN_COOKIE, token, cookieOptions);
   redirect("/orders");
 }
 
 export async function logout() {
   (await cookies()).delete(TOKEN_COOKIE);
   redirect("/login");
+}
+
+export async function logoutIdle() {
+  (await cookies()).delete(TOKEN_COOKIE);
+  redirect("/login?idle=1");
 }
 
 export async function respondToOffer(formData: FormData) {

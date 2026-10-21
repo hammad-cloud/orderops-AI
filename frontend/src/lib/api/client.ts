@@ -1,8 +1,8 @@
 /** Server-side API client: calls FastAPI directly and forwards the login cookie as a Bearer token. */
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { TOKEN_COOKIE } from "@/lib/session";
 
-export const TOKEN_COOKIE = "orderops_token";
 export const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
 export class ApiError extends Error {

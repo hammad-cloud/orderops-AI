@@ -35,7 +35,10 @@ From the project root:
 npm run dev
 ```
 
-This starts **FastAPI** and **Next.js** together:
+This starts **FastAPI** and **Next.js** together in development mode (auto-reload; each page compiles on first visit).
+For a fast, production-like run, use `npm start` instead: it builds the frontend once, then every page loads instantly.
+
+Sessions sign out after **15 minutes** without activity (`IDLE_TIMEOUT_SECONDS` in `frontend/src/lib/session.ts`).
 
 | App | URL |
 |-----|-----|
