@@ -56,7 +56,7 @@ Frontend calls go to `/api/v1/...` and `/health` on port **3000**; Next.js proxi
 .
 ├── backend/               # FastAPI + LangGraph API (see backend/README.md)
 ├── frontend/              # Next.js ops dashboard (see frontend/README.md)
-├── .github/               # CI (lint, tests against Postgres, type-check, build) + Dependabot
+├── .github/               # CI: lint, tests against Postgres, type-check, build
 ├── docs/                  # README screenshots
 ├── docker-compose.yml     # Local PostgreSQL
 ├── SECURITY.md            # Vulnerability reporting + deployment checklist
