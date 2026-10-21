@@ -1,27 +1,23 @@
 """Inventory validation endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.demo_data import random_inventory
+from app.db.session import get_db
+from app.models import InventoryItem
+from app.schemas.inventory import InventoryCheck, InventoryRead
 
 router = APIRouter()
 
 
-@router.get("")
-async def list_inventory() -> list[dict]:
-    """List inventory with live-style availability (demo random data)."""
-    return random_inventory()
+@router.get("", response_model=list[InventoryRead])
+async def list_inventory(db: AsyncSession = Depends(get_db)):
+    return (await db.scalars(select(InventoryItem).order_by(InventoryItem.sku))).all()
 
 
-@router.get("/check/{sku}")
-async def check_availability(sku: str) -> dict:
-    """Check live stock for a SKU."""
-    stock = {item["sku"]: item for item in random_inventory()}
-    item = stock.get(sku)
-    if not item:
-        return {"sku": sku, "available": False, "quantity": 0}
-    return {
-        "sku": sku,
-        "available": item["quantityAvailable"] > 0,
-        "quantity": item["quantityAvailable"],
-    }
+@router.get("/check/{sku}", response_model=InventoryCheck)
+async def check_availability(sku: str, db: AsyncSession = Depends(get_db)):
+    item = await db.get(InventoryItem, sku)
+    quantity = item.quantity_available if item else 0
+    return InventoryCheck(sku=sku, available=quantity > 0, quantity=quantity)

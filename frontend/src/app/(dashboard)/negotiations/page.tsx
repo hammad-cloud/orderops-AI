@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import {
   ArrowRight,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
 import { ApiStatus } from "@/components/layout/ApiStatus";
 import { ShareBar, StatCard } from "@/components/ui/StatCard";
 import { listNegotiations } from "@/lib/api/negotiations";
+import { respondToOffer } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,7 @@ export default async function NegotiationsPage() {
   try {
     rows = await listNegotiations();
   } catch (err) {
+    unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
   }
 
@@ -117,7 +120,7 @@ export default async function NegotiationsPage() {
                     <th className="px-6 py-3.5 font-semibold">Swap</th>
                     <th className="px-6 py-3.5 text-right font-semibold">Discount</th>
                     <th className="px-6 py-3.5 font-semibold">Channel</th>
-                    <th className="px-6 py-3.5 font-semibold">Decision</th>
+                    <th className="px-6 py-3.5 font-semibold">Customer decision</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/80">
@@ -152,9 +155,21 @@ export default async function NegotiationsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${decisionTone[decision] ?? decisionTone.pending}`}>
-                            {decision}
-                          </span>
+                          {decision === "pending" ? (
+                            <form action={respondToOffer} className="flex gap-2">
+                              <input type="hidden" name="id" value={row.id} />
+                              <button name="decision" value="accepted" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                                Accept
+                              </button>
+                              <button name="decision" value="declined" className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/20">
+                                Decline
+                              </button>
+                            </form>
+                          ) : (
+                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize ${decisionTone[decision] ?? decisionTone.pending}`}>
+                              {decision}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

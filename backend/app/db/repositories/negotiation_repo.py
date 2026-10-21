@@ -1,1 +1,0 @@
-"""Negotiation persistence repository."""

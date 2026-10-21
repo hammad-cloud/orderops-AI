@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import {
   AlertOctagon,
   ArrowUpRight,
@@ -33,6 +34,7 @@ export default async function AuditPage() {
   try {
     rows = await listAuditQueue();
   } catch (err) {
+    unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
   }
 

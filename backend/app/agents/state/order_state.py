@@ -1,16 +1,13 @@
 """Shared LangGraph agent state for the order triage workflow."""
 
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
+
+from app.models import InventoryItem, Order
 
 
 class OrderTriageState(TypedDict, total=False):
-    order_id: str
-    risk_score: float
-    risk_level: Literal["low", "medium", "high"]
-    stock_status: Literal["in_stock", "out_of_stock", "unknown"]
-    negotiation_id: str | None
-    customer_decision: Literal["accepted", "declined", "pending"] | None
-    alternative_sku: str | None
-    discount_percent: float | None
-    outcome: Literal["fulfill", "audit", "refund", "negotiating"] | None
-    metadata: dict[str, Any]
+    order: Order  # ORM object, mutated in place; the caller commits
+    stock: dict[str, InventoryItem]
+    shortage: dict | None  # first order line that can't be filled
+    alternative: InventoryItem | None
+    outcome: Literal["fulfill", "audit", "refund", "negotiate"]

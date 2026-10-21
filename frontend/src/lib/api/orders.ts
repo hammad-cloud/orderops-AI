@@ -1,10 +1,11 @@
-import { apiGet, apiPost } from "@/lib/api/client";
-import type { Order } from "@/types";
+import { apiGet } from "@/lib/api/client";
+import type { Order, OrderDetail } from "@/types";
 
-export function listOrders() {
-  return apiGet<Order[]>("/orders");
+export function listOrders(filters: { q?: string; status?: string } = {}) {
+  const params = new URLSearchParams(Object.entries(filters).filter(([, v]) => v) as [string, string][]);
+  return apiGet<Order[]>(`/orders${params.size ? `?${params}` : ""}`);
 }
 
-export function intakeOrder(payload: unknown) {
-  return apiPost<{ status: string }>("/orders/intake", payload);
+export function getOrder(id: string) {
+  return apiGet<OrderDetail>(`/orders/${encodeURIComponent(id)}`);
 }

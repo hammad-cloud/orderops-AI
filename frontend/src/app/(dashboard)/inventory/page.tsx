@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import {
   AlertTriangle,
   Boxes,
@@ -26,6 +27,7 @@ export default async function InventoryPage() {
   try {
     rows = await listInventory();
   } catch (err) {
+    unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
   }
 

@@ -1,22 +1,51 @@
-"""Order list response shape for the frontend."""
+"""Order request/response shapes."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field, computed_field
+
+from app.schemas.base import CamelModel
+from app.schemas.negotiation import NegotiationRead
 
 
-class OrderCreate(BaseModel):
+class OrderLine(CamelModel):
+    sku: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(ge=1, le=100)
+
+
+class OrderCreate(CamelModel):
+    id: str | None = Field(default=None, max_length=64)  # generated when omitted
+    customer_id: str = Field(min_length=1, max_length=64)
+    items: list[OrderLine] = Field(min_length=1, max_length=50)
+
+
+class OrderItemRead(CamelModel):
+    sku: str
+    name: str
+    quantity: int
+    price: float
+
+
+class OrderRead(CamelModel):
     id: str
     customer_id: str
-    items: list[dict] = Field(default_factory=list)
-
-
-class OrderRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: str
-    customer_id: str = Field(serialization_alias="customerId")
     status: str
-    risk_score: Optional[float] = Field(default=None, serialization_alias="riskScore")
-    created_at: Optional[datetime] = Field(default=None, serialization_alias="createdAt")
+    items: list[OrderItemRead]
+    total: float
+    risk_score: float | None = None
+    notes: str | None = None
+    created_at: datetime | None = None
+
+    @computed_field
+    def item_count(self) -> int:
+        return sum(i.quantity for i in self.items)
+
+    @computed_field
+    def risk_level(self) -> Literal["low", "medium", "high"]:
+        score = self.risk_score or 0.0
+        return "high" if score >= 0.75 else "medium" if score >= 0.4 else "low"
+
+
+class OrderDetail(OrderRead):
+    negotiations: list[NegotiationRead] = []

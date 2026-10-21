@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -36,13 +37,19 @@ function statusTone(status: string) {
   return "border-brand-500/25 bg-brand-500/10 text-brand-300";
 }
 
-export default async function OrdersPage() {
+const STATUSES = ["received", "fraud_check", "audit", "inventory_check", "negotiating", "fulfillment", "refunded", "completed"];
+
+type Props = { searchParams: Promise<{ q?: string; status?: string }> };
+
+export default async function OrdersPage({ searchParams }: Props) {
+  const { q = "", status = "" } = await searchParams;
   let orders: Awaited<ReturnType<typeof listOrders>> = [];
   let error: string | null = null;
 
   try {
-    orders = await listOrders();
+    orders = await listOrders({ q, status });
   } catch (err) {
+    unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
   }
 
@@ -112,20 +119,40 @@ export default async function OrdersPage() {
               <h2 className="text-lg font-semibold text-white">Triage queue</h2>
               <p className="mt-1 text-sm text-zinc-400">Live order status and risk posture.</p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative hidden sm:block">
+            <form className="flex flex-wrap items-center gap-2">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                 <input
-                  aria-label="Search orders"
-                  placeholder="Search orders"
-                  className="w-44 rounded-lg border border-zinc-700 bg-zinc-950/70 py-2 pl-9 pr-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-brand-500"
+                  name="q"
+                  defaultValue={q}
+                  aria-label="Search by order or customer ID"
+                  placeholder="Order or customer ID"
+                  className="w-48 rounded-lg border border-zinc-700 bg-zinc-950/70 py-2 pl-9 pr-3 text-sm text-zinc-200 outline-none transition placeholder:text-zinc-600 focus:border-brand-500"
                 />
               </div>
+              <select
+                name="status"
+                defaultValue={status}
+                aria-label="Filter by status"
+                className="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm capitalize text-zinc-200 outline-none focus:border-brand-500"
+              >
+                <option value="">All statuses</option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {formatLabel(s)}
+                  </option>
+                ))}
+              </select>
               <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-700">
                 <Filter className="h-4 w-4" />
-                Filter
+                Apply
               </button>
-            </div>
+              {(q || status) && (
+                <Link href="/orders" className="px-2 text-sm text-zinc-500 hover:text-zinc-300">
+                  Clear
+                </Link>
+              )}
+            </form>
           </div>
 
           {error ? (
@@ -133,7 +160,9 @@ export default async function OrdersPage() {
               Unable to load orders: {error}
             </div>
           ) : orders.length === 0 ? (
-            <div className="px-6 py-16 text-center text-sm text-zinc-400">No orders found.</div>
+            <div className="px-6 py-16 text-center text-sm text-zinc-400">
+              {q || status ? "No orders match these filters." : "No orders found."}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
@@ -155,7 +184,9 @@ export default async function OrdersPage() {
                         <Link href={`/orders/${order.id}`} className="font-mono font-medium text-brand-400 hover:text-brand-300">
                           {order.id}
                         </Link>
-                        <div className="mt-1 text-xs text-zinc-600">Automated triage</div>
+                        <div className="mt-1 text-xs text-zinc-600">
+                          {order.createdAt ? new Date(order.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-medium text-zinc-200">{order.customerId}</td>
                       <td className="px-6 py-4">

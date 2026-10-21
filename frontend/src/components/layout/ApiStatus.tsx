@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiHealth } from "@/lib/api/client";
 
 type ApiStatusProps = {
   error?: string | null;
@@ -20,7 +19,8 @@ export function ApiStatus({ error }: ApiStatusProps) {
 
     let active = true;
 
-    apiHealth()
+    fetch("/health", { cache: "no-store" })
+      .then((res) => res.json() as Promise<{ status: string; service: string }>)
       .then((health) => {
         if (!active) return;
         const isHealthy = health.status === "ok";

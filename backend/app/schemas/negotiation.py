@@ -1,22 +1,24 @@
 """Pydantic schemas for negotiations."""
 
-from typing import Literal, Optional
+from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from app.schemas.base import CamelModel
 
 
-class NegotiationRead(BaseModel):
+class NegotiationRead(CamelModel):
     id: str
     order_id: str
     original_sku: str
+    original_name: str | None = None
     alternative_sku: str
+    alternative_name: str | None = None
     discount_percent: float
     channel: Literal["email", "sms"]
     status: str
-    customer_decision: Optional[str] = None
+    customer_decision: str | None = None
+    created_at: datetime | None = None
 
-    model_config = {"from_attributes": True}
 
-
-class NegotiationResponse(BaseModel):
+class NegotiationResponse(CamelModel):
     decision: Literal["accepted", "declined"]

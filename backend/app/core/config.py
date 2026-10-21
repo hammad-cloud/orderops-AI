@@ -13,15 +13,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/orderops"
     SECRET_KEY: str = "change-me-in-production"
 
+    # Single operator account for the dashboard; login is refused while the password is empty
+    ADMIN_EMAIL: str = "admin@orderops.local"
+    ADMIN_PASSWORD: str = ""
+
     # Frontend (Next.js) origins allowed to call this API
     CORS_ORIGINS: list[str] = [
         "http://127.0.0.1:3000",
         "http://localhost:3000",
     ]
-
-    # Negotiation / messaging (placeholders)
-    EMAIL_PROVIDER_API_KEY: str = ""
-    SMS_PROVIDER_API_KEY: str = ""
 
 
 settings = Settings()

@@ -76,6 +76,24 @@ a {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+.sidebar form {
+  margin-top: auto;
+}
+
+.sidebar-logout {
+  width: 100%;
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+}
+
+.sidebar-logout:hover {
+  color: var(--text);
+  background: #18181b;
+}
+
 .app-content {
   padding: 2rem;
 }

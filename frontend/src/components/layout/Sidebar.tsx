@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logout } from "@/lib/actions";
 
 const links = [
   { href: "/orders", label: "Orders" },
@@ -28,6 +29,9 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+      <form action={logout}>
+        <button className="sidebar-logout">Sign out</button>
+      </form>
     </aside>
   );
 }
