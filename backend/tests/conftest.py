@@ -36,3 +36,22 @@ def client() -> TestClient:
         res = c.post("/api/v1/auth/login", json={"email": settings.ADMIN_EMAIL, "password": "test-password"})
         c.headers["Authorization"] = f"Bearer {res.json()['token']}"
         yield c
+
+
+def sign_in(client: TestClient, email: str, password: str = "role-password-1") -> dict[str, str]:
+    res = client.post("/api/v1/auth/login", json={"email": email, "password": password}, headers={"Authorization": ""})
+    assert res.status_code == 200, res.text
+    return {"Authorization": f"Bearer {res.json()['token']}"}
+
+
+@pytest.fixture(scope="session")
+def as_role(client: TestClient) -> dict[str, dict[str, str]]:
+    """Auth headers for one user per role; the customer login belongs to CUS-1001."""
+    headers = {"admin": dict(client.headers)}
+    for role in ("operator", "reviewer", "analyst", "customer"):
+        body = {"email": f"{role}@example.com", "password": "role-password-1", "role": role}
+        if role == "customer":
+            body["customerId"] = "CUS-1001"
+        assert client.post("/api/v1/users", json=body).status_code == 201
+        headers[role] = sign_in(client, body["email"])
+    return headers

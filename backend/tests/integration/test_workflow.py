@@ -43,6 +43,15 @@ def test_intake_rejects_bad_input(client: TestClient) -> None:
     assert client.post("/api/v1/orders/intake", json=body).status_code == 422
 
 
+def test_intake_resubmit_with_same_id_creates_one_order(client: TestClient) -> None:
+    before = stock(client, "SKU-1005")
+    body = {"id": "ORD-RETRY1", "customerId": "CUS-1001", "items": [{"sku": "SKU-1005", "quantity": 1}]}
+    assert client.post("/api/v1/orders/intake", json=body).status_code == 201
+    assert client.post("/api/v1/orders/intake", json=body).status_code == 409
+    assert [o["id"] for o in client.get("/api/v1/orders", params={"q": "ORD-RETRY1"}).json()] == ["ORD-RETRY1"]
+    assert stock(client, "SKU-1005") == before - 1  # stock reserved once
+
+
 def test_high_value_new_customer_goes_to_audit(client: TestClient) -> None:
     res = client.post("/api/v1/orders/intake", json={"customerId": "CUS-NEW", "items": [{"sku": "SKU-1011", "quantity": 9}]})
     assert res.json()["status"] == "audit"

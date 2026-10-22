@@ -27,7 +27,25 @@ cp frontend/.env.example frontend/.env.local
 Needs a running **PostgreSQL** reachable at `DATABASE_URL` with an `orderops` database:
 either `docker compose up -d db` (matches the default URL) or your own install plus `createdb orderops`. Tables are created and filled with demo data on first start.
 
-Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `backend/.env`. Login is refused while `ADMIN_PASSWORD` is empty.
+On first start the API creates an admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env` (skipped while the password is empty).
+Sign in with it, then add other users on the **Users** page. Changing these two settings later has no effect: manage accounts on the Users page.
+
+### Roles
+
+| Role | Can do |
+|---|---|
+| admin | Everything, including managing users and reading the audit trail (Activity log) |
+| operator | View everything, create orders, accept/decline negotiation offers |
+| reviewer | View everything, approve/reject orders in the audit queue |
+| analyst | View everything, change nothing |
+| customer | Linked to one customer ID: view and place only that customer's orders and answer its offers. Fraud scores and notes are hidden. |
+
+The API enforces every rule (`backend/app/core/permissions.py`); the dashboard only hides what a role can't use.
+Signing out revokes the token on the server, as does a password change or deactivation.
+
+Every sign-in, order, decision, account change and refused attempt goes into an append-only, hash-chained **audit trail**
+(who, what changed, when, outcome, order ID). Logs are scrubbed of tokens, passwords and email addresses. See
+[docs/architecture.md](docs/architecture.md#audit-trail).
 
 ## Run together (one command)
 
@@ -56,9 +74,9 @@ Frontend calls go to `/api/v1/...` and `/health` on port **3000**; Next.js proxi
 .
 ├── backend/               # FastAPI + LangGraph API (see backend/README.md)
 ├── frontend/              # Next.js ops dashboard (see frontend/README.md)
-├── .github/               # CI: lint, tests against Postgres, type-check, build
-├── docs/                  # README screenshots
-├── docker-compose.yml     # Local PostgreSQL
+├── .github/               # CI: lint, tests against Postgres, type-check, unit + browser tests, build
+├── docs/                  # Architecture, database schema, API, threat model, runbook
+├── docker-compose.yml     # Full stack (db + backend + frontend), or just the db for local dev
 ├── SECURITY.md            # Vulnerability reporting + deployment checklist
 └── package.json           # `npm run dev` starts both apps together
 ```
@@ -81,16 +99,30 @@ Order intake → fraud check → inventory validation → (negotiate if OOS) →
 - **Out of stock:** a same-category alternative at the closest price is offered at 10% off → **negotiating**. With no alternative → **refunded**.
 - **Customer reply** (`POST /api/v1/negotiations/{id}/respond`): accepted → item swapped, discounted, fulfilled. Declined → refunded.
 
+## Run in Docker
+
+```bash
+cp backend/.env.example backend/.env    # set SECRET_KEY and ADMIN_PASSWORD
+docker compose up --build               # → http://localhost:3000
+```
+
+## Docs
+
+[Architecture](docs/architecture.md) · [Database schema](docs/database-schema.md) · [API](docs/api.md) ·
+[Threat model](docs/threat-model.md) · [Runbook](docs/runbook.md)
+
 ## Tests & lint
 
 ```bash
 cd backend && .venv/Scripts/python -m pytest -q && .venv/Scripts/python -m ruff check .
-cd frontend && npm run lint && npx tsc --noEmit
+cd frontend && npm run lint && npx tsc --noEmit && npm test
+cd frontend && npx playwright install chromium && npm run test:e2e   # browser tests, starts its own servers
 ```
 
 CI runs all of these plus a production build on every push.
 
-Tests use a separate `orderops_test` database (created and wiped automatically), never your dev data.
+Tests never touch your dev data: backend tests use `orderops_test`, browser tests use `orderops_e2e` (both recreated
+automatically) and run on ports 3001/8001. The browser tests do replace `frontend/.next` with a production build.
 
 ## License
 

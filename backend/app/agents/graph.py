@@ -1,7 +1,7 @@
 """
 LangGraph StateGraph wiring.
 
-fraud_check ─high risk─▶ audit
+fraud_check ─high risk─▶ audit   (a reviewer approves via /audit/{order_id}/decision, re-entering at inventory_check)
      │
 inventory_check ─in stock─▶ fulfill
      ├─ OOS, alternative found ─▶ negotiate   (customer replies via /negotiations/{id}/respond)
@@ -15,6 +15,7 @@ from app.agents.state.order_state import OrderTriageState
 from app.services.fraud.scorer import HIGH_RISK, score_order
 from app.services.inventory.validator import first_shortage, load_stock, reserve, suggest_alternative
 from app.services.negotiation.offer_engine import create_offer
+from app.services.refunds.refunder import refund as refund_order
 
 
 async def fraud_check(state: OrderTriageState, config: RunnableConfig) -> OrderTriageState:
@@ -56,8 +57,7 @@ async def audit(state: OrderTriageState) -> OrderTriageState:
 
 
 async def refund(state: OrderTriageState) -> OrderTriageState:
-    state["order"].status = "refunded"
-    state["order"].notes = f"{state['shortage']['sku']} out of stock with no alternative"
+    refund_order(state["order"], f"{state['shortage']['sku']} out of stock with no alternative")
     return {}
 
 
@@ -65,7 +65,8 @@ def build_order_triage_graph():
     graph = StateGraph(OrderTriageState)
     for node in (fraud_check, inventory_check, fulfill, negotiate, audit, refund):
         graph.add_node(node.__name__, node)
-    graph.set_entry_point("fraud_check")
+    graph.set_conditional_entry_point(lambda s: "inventory_check" if s.get("approved") else "fraud_check",
+                                      ["fraud_check", "inventory_check"])
     graph.add_conditional_edges("fraud_check", lambda s: s.get("outcome") or "inventory_check",
                                 ["audit", "inventory_check"])
     graph.add_conditional_edges("inventory_check", lambda s: s["outcome"], ["fulfill", "negotiate", "refund"])

@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { ApiStatus } from "@/components/layout/ApiStatus";
 import { ShareBar, StatCard } from "@/components/ui/StatCard";
+import { decideAudit } from "@/lib/actions";
 import { listAuditQueue } from "@/lib/api/audit";
+import { can, getMe } from "@/lib/api/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +31,11 @@ function tally(values: string[]) {
 
 export default async function AuditPage() {
   let rows: Awaited<ReturnType<typeof listAuditQueue>> = [];
+  let canDecide = false;
   let error: string | null = null;
 
   try {
-    rows = await listAuditQueue();
+    [rows, canDecide] = await Promise.all([listAuditQueue(), getMe().then((me) => can(me, "audit:decide"))]);
   } catch (err) {
     unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
@@ -148,6 +151,17 @@ export default async function AuditPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
+                        {canDecide && (
+                          <form action={decideAudit} className="mr-2 inline-flex gap-2 align-middle">
+                            <input type="hidden" name="orderId" value={row.orderId} />
+                            <button name="decision" value="approve" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
+                              Approve
+                            </button>
+                            <button name="decision" value="reject" className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300 hover:bg-rose-500/20">
+                              Reject
+                            </button>
+                          </form>
+                        )}
                         <Link href={`/orders/${row.orderId}`} aria-label={`Open ${row.orderId}`} className="inline-flex rounded-md p-1.5 text-zinc-500 opacity-0 transition hover:bg-zinc-700 hover:text-white group-hover:opacity-100">
                           <ArrowUpRight className="h-4 w-4" />
                         </Link>

@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { ApiStatus } from "@/components/layout/ApiStatus";
+import { can, getMe } from "@/lib/api/auth";
 import { listOrders } from "@/lib/api/orders";
 
 export const dynamic = "force-dynamic";
@@ -45,10 +46,13 @@ type Props = { searchParams: Promise<{ q?: string; status?: string }> };
 export default async function OrdersPage({ searchParams }: Props) {
   const { q = "", status = "" } = await searchParams;
   let orders: Awaited<ReturnType<typeof listOrders>> = [];
+  let canCreate = false;
+  let canSeeAnalytics = false;
   let error: string | null = null;
 
   try {
-    orders = await listOrders({ q, status });
+    const [rows, me] = await Promise.all([listOrders({ q, status }), getMe()]);
+    [orders, canCreate, canSeeAnalytics] = [rows, can(me, "orders:create"), can(me, "analytics:read")];
   } catch (err) {
     unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
@@ -76,10 +80,12 @@ export default async function OrdersPage({ searchParams }: Props) {
           </div>
           <div className="flex items-center gap-3">
             <ApiStatus />
-            <Link href="/orders/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-500">
-              <Plus className="h-4 w-4" />
-              New order
-            </Link>
+            {canCreate && (
+              <Link href="/orders/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-500">
+                <Plus className="h-4 w-4" />
+                New order
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -202,9 +208,13 @@ export default async function OrdersPage({ searchParams }: Props) {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize risk-${order.riskLevel ?? "low"}`}>
-                          {order.riskLevel ?? "low"} {order.riskScore != null ? `(${order.riskScore.toFixed(2)})` : ""}
-                        </span>
+                        {order.riskScore == null ? (
+                          <span className="text-zinc-600">—</span> // not scored yet, or hidden from customer logins
+                        ) : (
+                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium capitalize risk-${order.riskLevel ?? "low"}`}>
+                            {order.riskLevel ?? "low"} ({order.riskScore.toFixed(2)})
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right text-zinc-300">{order.itemCount ?? "—"}</td>
                       <td className="px-6 py-4 text-right font-semibold text-white">{formatMoney(order.total)}</td>
@@ -222,9 +232,11 @@ export default async function OrdersPage({ searchParams }: Props) {
 
           <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4 text-xs text-zinc-500">
             <span>Showing {orders.length} orders</span>
-            <Link href="/analytics" className="inline-flex items-center gap-1 font-medium text-brand-400 hover:text-brand-300">
-              View performance <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
+            {canSeeAnalytics && (
+              <Link href="/analytics" className="inline-flex items-center gap-1 font-medium text-brand-400 hover:text-brand-300">
+                View performance <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
         </section>
       </div>

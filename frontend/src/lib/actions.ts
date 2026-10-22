@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { BACKEND_URL, apiPost } from "@/lib/api/client";
+import { ApiError, BACKEND_URL, apiPatch, apiPost } from "@/lib/api/client";
 import { TOKEN_COOKIE, cookieOptions } from "@/lib/session";
 import type { Order } from "@/types";
 
@@ -21,13 +21,24 @@ export async function login(formData: FormData) {
   redirect("/orders");
 }
 
+/** Revoke the token on the backend (so a copied token stops working too), then drop the cookie. */
+async function endSession() {
+  const jar = await cookies();
+  const token = jar.get(TOKEN_COOKIE)?.value;
+  if (token) {
+    // best effort: if the backend is down the cookie is still removed and the token expires on its own
+    await fetch(`${BACKEND_URL}/api/v1/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+  }
+  jar.delete(TOKEN_COOKIE);
+}
+
 export async function logout() {
-  (await cookies()).delete(TOKEN_COOKIE);
+  await endSession();
   redirect("/login");
 }
 
 export async function logoutIdle() {
-  (await cookies()).delete(TOKEN_COOKIE);
+  await endSession();
   redirect("/login?idle=1");
 }
 
@@ -36,23 +47,76 @@ export async function respondToOffer(formData: FormData) {
   revalidatePath("/negotiations");
 }
 
-/** Form fields: `customerId`, plus `qty:<sku>` per product (0 = not ordered). */
-export async function createOrder(formData: FormData) {
-  const customerId = String(formData.get("customerId") ?? "").trim();
-  const back = (message: string): never =>
-    redirect(`/orders/new?${new URLSearchParams({ error: message, customer: customerId })}`);
-  const items = [...formData.entries()]
-    .filter(([key, value]) => key.startsWith("qty:") && Number(value) > 0)
-    .map(([key, value]) => ({ sku: key.slice(4), quantity: Number(value) }));
-  if (items.length === 0) return back("Add a quantity for at least one product.");
+export async function decideAudit(formData: FormData) {
+  await apiPost(`/audit/${encodeURIComponent(String(formData.get("orderId")))}/decision`, { decision: formData.get("decision") });
+  revalidatePath("/audit");
+}
 
-  let order: Order;
+export type FormResult = { error?: string; ok?: boolean };
+
+async function attempt(call: () => Promise<unknown>): Promise<FormResult> {
   try {
-    order = await apiPost<Order>("/orders/intake", { customerId, items });
+    await call();
   } catch (err) {
     unstable_rethrow(err); // let the sign-in redirect through
-    return back(err instanceof Error ? err.message : "Could not create the order.");
+    return { error: err instanceof Error ? err.message : "Request failed." };
+  }
+  revalidatePath("/users");
+  return { ok: true };
+}
+
+const optional = (value: FormDataEntryValue | null) => String(value ?? "").trim() || null;
+
+export async function createUser(_prev: FormResult, formData: FormData): Promise<FormResult> {
+  return attempt(() =>
+    apiPost("/users", {
+      email: String(formData.get("email") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
+      role: formData.get("role"),
+      customerId: optional(formData.get("customerId")),
+    }),
+  );
+}
+
+/** Form fields: `id`, `role`, `customerId`, optional `password`; a button named `isActive` toggles access instead. */
+export async function updateUser(_prev: FormResult, formData: FormData): Promise<FormResult> {
+  const id = encodeURIComponent(String(formData.get("id")));
+  const toggle = formData.get("isActive");
+  if (toggle !== null) return attempt(() => apiPatch(`/users/${id}`, { isActive: toggle === "true" }));
+  return attempt(() =>
+    apiPatch(`/users/${id}`, {
+      role: formData.get("role"),
+      customerId: optional(formData.get("customerId")),
+      password: optional(formData.get("password")),
+    }),
+  );
+}
+
+/** What the New order form gets back when a submit fails, so it can refill every field. */
+export type NewOrderState = { error?: string; customerId: string; quantities: Record<string, string> };
+
+/** Form fields: `orderId` (idempotency key), `customerId`, plus `qty:<sku>` per product (0 = not ordered). */
+export async function createOrder(_prev: NewOrderState, formData: FormData): Promise<NewOrderState> {
+  const orderId = String(formData.get("orderId") ?? "") || undefined;
+  const customerId = String(formData.get("customerId") ?? "").trim();
+  const quantities = Object.fromEntries(
+    [...formData.entries()].filter(([key]) => key.startsWith("qty:")).map(([key, value]) => [key.slice(4), String(value)]),
+  );
+  const back = (error: string): NewOrderState => ({ error, customerId, quantities });
+  const items = Object.entries(quantities)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([sku, value]) => ({ sku, quantity: Number(value) }));
+  if (items.length === 0) return back("Add a quantity for at least one product.");
+
+  let id: string;
+  try {
+    id = (await apiPost<Order>("/orders/intake", { id: orderId, customerId, items })).id;
+  } catch (err) {
+    unstable_rethrow(err); // let the sign-in redirect through
+    // 409 on our own id means this form was already submitted: show that order instead of a duplicate
+    if (err instanceof ApiError && err.status === 409 && orderId) id = orderId;
+    else return back(err instanceof Error ? err.message : "Could not create the order.");
   }
   revalidatePath("/orders");
-  redirect(`/orders/${encodeURIComponent(order.id)}`);
+  redirect(`/orders/${encodeURIComponent(id)}`);
 }

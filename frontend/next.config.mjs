@@ -7,6 +7,8 @@ const backend = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // the Docker image runs the self-contained server; `npm start` keeps using `next start`
+  ...(process.env.STANDALONE === "1" && { output: "standalone" }),
   outputFileTracingRoot: join(dirname(fileURLToPath(import.meta.url)), ".."),
   async headers() {
     return [

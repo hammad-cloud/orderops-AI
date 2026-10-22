@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/orderops"
     SECRET_KEY: str = "change-me-in-production"
 
-    # Single operator account for the dashboard; login is refused while the password is empty
+    # First admin account, created on first start when the users table is empty; ignored after that
     ADMIN_EMAIL: str = "admin@orderops.local"
     ADMIN_PASSWORD: str = ""
 

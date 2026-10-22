@@ -80,6 +80,13 @@ a {
   margin-top: auto;
 }
 
+.sidebar-user {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0 0.75rem 0.5rem;
+}
+
 .sidebar-logout {
   width: 100%;
   text-align: left;

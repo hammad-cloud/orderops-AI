@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Customer, InventoryItem, Negotiation, Order
 from app.services.inventory.validator import first_shortage, load_stock, reserve
+from app.services.refunds.refunder import refund
 
 log = logging.getLogger(__name__)
 
@@ -52,5 +53,6 @@ async def apply_decision(db: AsyncSession, offer: Negotiation, order: Order, dec
             order.total = round(sum(i["price"] * i["quantity"] for i in items), 2)
             order.status = "fulfillment"
             return
-        order.notes = "Alternative sold out before the customer accepted"
-    order.status = "refunded"
+        refund(order, "Alternative sold out before the customer accepted")
+        return
+    refund(order)

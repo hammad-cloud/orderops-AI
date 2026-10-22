@@ -1,5 +1,7 @@
-# Local PostgreSQL matching the default DATABASE_URL in backend/.env.example.
-# Start with: docker compose up -d db
+# Full stack: PostgreSQL + FastAPI + Next.js.
+#   Everything:        docker compose up --build        → http://localhost:3000
+#   Database only:     docker compose up -d db          (for `npm run dev` on the host)
+# The backend reads SECRET_KEY, ADMIN_EMAIL and ADMIN_PASSWORD from backend/.env (copy backend/.env.example).
 services:
   db:
     image: postgres:17
@@ -11,6 +13,34 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orderops"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/orderops
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
 
 volumes:
   pgdata:

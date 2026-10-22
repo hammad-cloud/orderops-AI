@@ -7,6 +7,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Test output
+test-results/
+playwright-report/
+
 # Next.js / TypeScript build output
 .next/
 *.tsbuildinfo

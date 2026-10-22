@@ -9,29 +9,32 @@ backend/
 ├── app/
 │   ├── main.py             # App factory; creates tables + seeds demo data on first start
 │   ├── api/v1/
-│   │   ├── router.py       # Mounts endpoints; everything except /auth needs a token
-│   │   └── endpoints/      # auth, orders, negotiations, inventory, audit, analytics
+│   │   ├── router.py       # Mounts endpoints; each router requires a permission (see core/permissions.py)
+│   │   └── endpoints/      # auth, users, orders, negotiations, inventory, audit, analytics
 │   ├── agents/
 │   │   ├── graph.py        # LangGraph triage graph (nodes + conditional edges)
 │   │   └── state/          # Graph state type
-│   ├── core/               # Settings (config.py), tokens & auth dependency (security.py)
+│   ├── core/               # Settings, role → permission table, password hashing, tokens & auth dependencies
 │   ├── db/                 # Async engine + session dependency
 │   ├── models/             # SQLAlchemy tables
 │   ├── schemas/            # Pydantic request/response shapes (camelCase on the wire)
-│   └── services/           # Business rules: fraud scoring, inventory, negotiation, seed data
+│   └── services/           # Business rules: fraud, inventory, negotiation, refunds, idempotency, audit trail, seed
+├── migrations/             # Alembic schema history; applied on startup (alembic.ini at backend/)
+├── scripts/                # set_admin_password (break-glass), reset_test_db (e2e)
 ├── tests/
 │   ├── conftest.py         # Uses a throwaway `orderops_test` database
 │   ├── unit/               # Health + auth
-│   └── integration/        # Full triage workflow over HTTP
+│   └── integration/        # Full triage workflow, RBAC, audit trail and migrations
 ├── requirements.txt        # Runtime dependencies
 ├── requirements-dev.txt    # + pytest, ruff
 ├── pyproject.toml          # Ruff + pytest config
+├── Dockerfile              # Production image (used by ../docker-compose.yml)
 └── run-dev.js              # `npm run dev` launcher (uses .venv if present)
 ```
 
 ## Workflow
 
-1. **Fraud check** — rule-based score; ≥ 0.75 → manual **audit** queue
+1. **Fraud check** — rule-based score; ≥ 0.75 → manual **audit** queue, where a reviewer approves (continue to step 2) or rejects (refunded)
 2. **Inventory check** — all lines in stock → stock reserved → **fulfillment**
 3. **Negotiation** — out of stock → same-category alternative at 10% off → **negotiating**; no alternative → **refunded**
 4. **Customer reply** — accepted → item swapped and fulfilled; declined → refunded

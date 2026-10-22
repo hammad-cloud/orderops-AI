@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { ApiStatus } from "@/components/layout/ApiStatus";
 import { ShareBar, StatCard } from "@/components/ui/StatCard";
+import { can, getMe } from "@/lib/api/auth";
 import { listNegotiations } from "@/lib/api/negotiations";
 import { respondToOffer } from "@/lib/actions";
 
@@ -25,10 +26,13 @@ const decisionTone: Record<string, string> = {
 
 export default async function NegotiationsPage() {
   let rows: Awaited<ReturnType<typeof listNegotiations>> = [];
+  let canRespond = false;
+  let canSeeAnalytics = false;
   let error: string | null = null;
 
   try {
-    rows = await listNegotiations();
+    const [offers, me] = await Promise.all([listNegotiations(), getMe()]);
+    [rows, canRespond, canSeeAnalytics] = [offers, can(me, "negotiations:respond"), can(me, "analytics:read")];
   } catch (err) {
     unstable_rethrow(err); // let the sign-in redirect through
     error = err instanceof Error ? err.message : "Failed to reach FastAPI";
@@ -155,7 +159,7 @@ export default async function NegotiationsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          {decision === "pending" ? (
+                          {decision === "pending" && canRespond ? (
                             <form action={respondToOffer} className="flex gap-2">
                               <input type="hidden" name="id" value={row.id} />
                               <button name="decision" value="accepted" className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20">
@@ -181,9 +185,11 @@ export default async function NegotiationsPage() {
 
           <div className="flex items-center justify-between border-t border-zinc-800 px-6 py-4 text-xs text-zinc-500">
             <span>Showing {rows.length} negotiations</span>
-            <Link href="/analytics" className="inline-flex items-center gap-1 font-medium text-brand-400 hover:text-brand-300">
-              Recovery analytics <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
+            {canSeeAnalytics && (
+              <Link href="/analytics" className="inline-flex items-center gap-1 font-medium text-brand-400 hover:text-brand-300">
+                Recovery analytics <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
         </section>
       </div>

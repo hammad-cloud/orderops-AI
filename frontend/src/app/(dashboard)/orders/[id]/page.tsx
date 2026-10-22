@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Calendar, DollarSign, Package, ShieldAlert } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
+import { can, getMe } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { getOrder } from "@/lib/api/orders";
 
@@ -26,6 +27,9 @@ export default async function OrderDetailPage({ params }: Props) {
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
   });
+  // fraud score and agent notes are internal; the API already blanks them for customer logins
+  const me = await getMe();
+  const staff = can(me, "audit:read");
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -39,6 +43,11 @@ export default async function OrderDetailPage({ params }: Props) {
             <span className="inline-flex rounded-full border border-brand-500/25 bg-brand-500/10 px-2.5 py-1 text-xs font-medium capitalize text-brand-300">
               {order.status.replaceAll("_", " ")}
             </span>
+            {can(me, "audit_trail:read") && (
+              <Link href={`/activity?orderId=${encodeURIComponent(order.id)}`} className="text-xs font-medium text-brand-400 hover:text-brand-300">
+                Activity for this order →
+              </Link>
+            )}
           </div>
           <p className="mt-1.5 text-sm text-zinc-400">{outcome[order.status]}</p>
         </div>
@@ -48,12 +57,14 @@ export default async function OrderDetailPage({ params }: Props) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Order total" value={`$${(order.total ?? 0).toFixed(2)}`} hint={`Customer ${order.customerId}`} icon={DollarSign} />
           <StatCard label="Units" value={order.itemCount ?? 0} hint={`${order.items.length} line items`} icon={Package} />
-          <StatCard
-            label="Risk score"
-            value={<span className={`capitalize risk-${order.riskLevel ?? "low"} rounded-full px-2`}>{order.riskScore?.toFixed(2) ?? "—"}</span>}
-            hint={`${order.riskLevel ?? "low"} risk`}
-            icon={ShieldAlert}
-          />
+          {staff && (
+            <StatCard
+              label="Risk score"
+              value={<span className={`capitalize risk-${order.riskLevel ?? "low"} rounded-full px-2`}>{order.riskScore?.toFixed(2) ?? "—"}</span>}
+              hint={`${order.riskLevel ?? "low"} risk`}
+              icon={ShieldAlert}
+            />
+          )}
           <StatCard
             label="Received"
             value={order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
@@ -63,7 +74,7 @@ export default async function OrderDetailPage({ params }: Props) {
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 lg:col-span-2">
+          <section className={`overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 ${staff ? "lg:col-span-2" : "lg:col-span-3"}`}>
             <div className="border-b border-zinc-800 px-6 py-5">
               <h2 className="text-lg font-semibold text-white">Line items</h2>
             </div>
@@ -94,19 +105,21 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           </section>
 
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
-            <h2 className="text-lg font-semibold text-white">Agent notes</h2>
-            <p className="mt-1 text-sm text-zinc-400">Why the triage graph made this decision.</p>
-            {order.notes ? (
-              <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-                {order.notes.split("; ").map((note) => (
-                  <li key={note} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">{note}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-zinc-500">No risk signals.</p>
-            )}
-          </section>
+          {staff && (
+            <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+              <h2 className="text-lg font-semibold text-white">Agent notes</h2>
+              <p className="mt-1 text-sm text-zinc-400">Why the triage graph made this decision.</p>
+              {order.notes ? (
+                <ul className="mt-4 space-y-2 text-sm text-zinc-300">
+                  {order.notes.split("; ").map((note) => (
+                    <li key={note} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">{note}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-sm text-zinc-500">No risk signals.</p>
+              )}
+            </section>
+          )}
         </div>
 
         {order.negotiations.length > 0 && (

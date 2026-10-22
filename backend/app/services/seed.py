@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.orders import intake_order
+from app.api.v1.endpoints.orders import create_order
 from app.models import Customer, InventoryItem, Negotiation, Order
 from app.schemas.order import OrderCreate
 from app.services.negotiation.offer_engine import apply_decision
@@ -60,7 +60,7 @@ async def seed(db: AsyncSession) -> None:
     now = datetime.now(UTC)
     for order_id, customer_id, lines, days_ago, decision in ORDERS:
         payload = OrderCreate(id=order_id, customer_id=customer_id, items=[{"sku": s, "quantity": q} for s, q in lines])
-        await intake_order(payload, db)
+        await create_order(payload, db)
         order = await db.get(Order, order_id)
         order.created_at = order.updated_at = now - timedelta(days=days_ago, hours=len(lines))
         offer = await db.scalar(select(Negotiation).where(Negotiation.order_id == order_id))
